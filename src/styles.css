@@ -2,7 +2,7 @@
 @source "../src";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -39,6 +39,24 @@
   --danger: oklch(0.55 0.18 25);
   --danger-soft: oklch(0.94 0.04 25);
   --blue: oklch(0.58 0.11 240);
+  --dot-color: oklch(0.86 0.014 85 / 0.35);
+}
+
+.dark {
+  --background: oklch(0.18 0.012 260);
+  --paper: oklch(0.21 0.012 260);
+  --foreground: oklch(0.94 0.008 90);
+  --card: oklch(0.23 0.014 260);
+  --card-foreground: oklch(0.94 0.008 90);
+  --border: oklch(0.34 0.014 260);
+  --muted: oklch(0.28 0.012 260);
+  --muted-foreground: oklch(0.68 0.014 250);
+  --accent: oklch(0.74 0.14 155);
+  --accent-soft: oklch(0.32 0.06 155);
+  --danger: oklch(0.7 0.18 25);
+  --danger-soft: oklch(0.32 0.08 25);
+  --blue: oklch(0.72 0.13 240);
+  --dot-color: oklch(0.5 0.02 260 / 0.35);
 }
 
 @layer base {
@@ -48,7 +66,21 @@
     color: var(--color-foreground);
     font-family: var(--font-mono);
     background-image:
-      radial-gradient(oklch(0.86 0.014 85 / 0.35) 1px, transparent 1px);
+      radial-gradient(var(--dot-color) 1px, transparent 1px);
     background-size: 22px 22px;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
+
+@keyframes cell-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.6); filter: drop-shadow(0 0 6px var(--accent)); }
+  100% { transform: scale(1); }
+}
+.animate-cell-pop { animation: cell-pop 450ms cubic-bezier(.2,.8,.2,1); }
+
+@keyframes spark {
+  0% { transform: translate(0,0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+.spark { position: absolute; width: 4px; height: 4px; border-radius: 9999px; pointer-events: none; animation: spark 600ms ease-out forwards; }
