@@ -10,22 +10,18 @@ interface Props {
   todayDay: number;
   onCycle?: (dayIdx: number) => void;
   onSet?: (dayIdx: number, value: number) => void;
+  disabled?: boolean;
 }
 
-/**
- * Line + tick chart. Each day is a dot ("tick"); ticks are connected with
- * a polyline. Clicking a day on cycle-mode increments its score; on set-mode
- * the click/drag Y position sets the value.
- */
 export function LineChart({
-  data, maxY, ySteps = 4, color, height = 130, unit = "", todayDay, onCycle, onSet,
+  data, maxY, ySteps = 4, color, height = 130, unit = "", todayDay, onCycle, onSet, disabled = false,
 }: Props) {
   const ticks = Array.from({ length: ySteps + 1 }, (_, i) => Math.round(((ySteps - i) / ySteps) * maxY));
   const wrapRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<number | null>(null);
   const [hover, setHover] = useState<number | null>(null);
 
-  const W = 100; // viewBox width (percent based)
+  const W = 100;
   const H = 100;
   const pad = 4;
   const n = data.length;
@@ -48,15 +44,29 @@ export function LineChart({
   };
 
   useEffect(() => {
-    if (dragging === null || !onSet) return;
+    if (dragging === null || !onSet || disabled) return;
     const move = (e: MouseEvent) => onSet(dayFromX(e.clientX), valueFromY(e.clientY));
     const up = () => setDragging(null);
+    const tmove = (e: TouchEvent) => {
+      if (!e.touches[0]) return;
+      e.preventDefault();
+      onSet(dayFromX(e.touches[0].clientX), valueFromY(e.touches[0].clientY));
+    };
+    const tend = () => setDragging(null);
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
-    return () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
-  }, [dragging, onSet]);
+    window.addEventListener("touchmove", tmove, { passive: false });
+    window.addEventListener("touchend", tend);
+    window.addEventListener("touchcancel", tend);
+    return () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      window.removeEventListener("touchmove", tmove);
+      window.removeEventListener("touchend", tend);
+      window.removeEventListener("touchcancel", tend);
+    };
+  }, [dragging, onSet, disabled]);
 
-  // Build polyline only over filled-in (non-zero) days up to today
   const filledPoints = data
     .map((v, i) => ({ v, i }))
     .filter((p) => p.i + 1 <= todayDay && p.v > 0);
@@ -64,6 +74,13 @@ export function LineChart({
   const areaPath = filledPoints.length
     ? `${linePath} L ${xAt(filledPoints[filledPoints.length - 1].i)} ${H - pad} L ${xAt(filledPoints[0].i)} ${H - pad} Z`
     : "";
+
+  const startSet = (clientX: number, clientY: number) => {
+    if (!onSet || disabled) return;
+    const i = dayFromX(clientX);
+    setDragging(i);
+    onSet(i, valueFromY(clientY));
+  };
 
   return (
     <div className="flex gap-2 select-none">
@@ -75,25 +92,21 @@ export function LineChart({
       <div className="flex-1 flex flex-col">
         <div
           ref={wrapRef}
-          className="relative border-l border-b border-border"
+          className="relative border-l border-b border-border touch-none"
           style={{ height }}
-          onMouseDown={(e) => {
-            if (!onSet) return;
+          onMouseDown={(e) => { e.preventDefault(); startSet(e.clientX, e.clientY); }}
+          onTouchStart={(e) => {
+            if (!onSet || !e.touches[0]) return;
             e.preventDefault();
-            const i = dayFromX(e.clientX);
-            setDragging(i);
-            onSet(i, valueFromY(e.clientY));
+            startSet(e.touches[0].clientX, e.touches[0].clientY);
           }}
         >
           <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
-            {/* horizontal grid */}
             {ticks.map((_, i) => {
               const y = pad + (i * (H - pad * 2)) / ySteps;
               return <line key={i} x1={pad} x2={W - pad} y1={y} y2={y} stroke="var(--border)" strokeWidth={0.3} strokeDasharray="0.6 1" />;
             })}
-            {/* area fill */}
             {areaPath && <path d={areaPath} fill={color} opacity={0.12} />}
-            {/* line */}
             {linePath && (
               <path
                 d={linePath}
@@ -106,20 +119,15 @@ export function LineChart({
               />
             )}
           </svg>
-          {/* interactive dots */}
           {data.map((v, i) => {
             const isToday = i + 1 === todayDay;
             const isFuture = i + 1 > todayDay;
             const filled = v > 0;
             const left = `${xAt(i)}%`;
             const top = filled ? `${yAt(v)}%` : "100%";
-            const interactive = !!(onCycle || onSet) && !isFuture;
+            const interactive = !!(onCycle || onSet) && !isFuture && !disabled;
             return (
-              <div
-                key={i}
-                className="absolute"
-                style={{ left, top, transform: "translate(-50%, -50%)" }}
-              >
+              <div key={i} className="absolute" style={{ left, top, transform: "translate(-50%, -50%)" }}>
                 <button
                   type="button"
                   disabled={!interactive}
@@ -138,13 +146,12 @@ export function LineChart({
                 />
                 {hover === i && (
                   <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-7 whitespace-nowrap rounded bg-foreground px-1.5 py-0.5 text-[9px] text-background">
-                    d{i + 1} · {v}{unit}{onCycle && interactive ? " · click +" : ""}
+                    d{i + 1} · {v}{unit}{onCycle && interactive ? " · tap +" : ""}
                   </div>
                 )}
               </div>
             );
           })}
-          {/* today vertical guide */}
           <div
             className="pointer-events-none absolute top-0 bottom-0 border-l border-dashed border-foreground/30"
             style={{ left: `${xAt(todayDay - 1)}%` }}
