@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { CircularProgress } from "@/components/CircularProgress";
+import { MonthlyScore } from "@/components/MonthlyScore";
 import { MomentumConstellation } from "@/components/MomentumConstellation";
-import { BarChart } from "@/components/BarChart";
+import { LineChart } from "@/components/LineChart";
 import { computeStats, useTracker } from "@/lib/use-tracker";
 
 export const Route = createFileRoute("/")({
@@ -31,6 +31,14 @@ function HabitTracker() {
   const quitWins = state.quit.data.filter((v) => v >= 3).length;
   const buildWins = state.build.data.filter((v) => v >= 3).length;
   const bestStreak = perHabit.length ? Math.max(...perHabit.map((h) => h.streak)) : 0;
+
+  const dayScores = useMemo(() => {
+    return Array.from({ length: state.daysInMonth }, (_, i) => {
+      if (!state.habits.length) return 0;
+      const done = state.habits.reduce((s, h) => s + (h.cells[i] === "done" ? 1 : 0), 0);
+      return done / state.habits.length;
+    });
+  }, [state.habits, state.daysInMonth]);
 
   return (
     <main className="min-h-screen px-5 py-8 md:py-12">
@@ -86,10 +94,11 @@ function HabitTracker() {
                         <td className="whitespace-nowrap pr-3 py-1 text-[12px] font-medium">
                           <span className="mr-2">{h.emoji}</span>
                           <input
-                            value={h.name}
+                            type="text"
+                            value={h.name ?? ""}
                             onChange={(e) => t.renameHabit(h.id, e.target.value)}
                             maxLength={40}
-                            className="bg-transparent outline-none border-b border-transparent focus:border-border w-[110px] py-0.5"
+                            className="bg-transparent outline-none border-b border-transparent focus:border-border w-[140px] py-0.5"
                           />
                         </td>
                         {h.cells.map((c, i) => {
@@ -131,6 +140,7 @@ function HabitTracker() {
                 className="mt-4 flex items-center gap-2"
               >
                 <input
+                  type="text"
                   value={newEmoji}
                   onChange={(e) => setNewEmoji(e.target.value)}
                   maxLength={2}
@@ -138,6 +148,7 @@ function HabitTracker() {
                   aria-label="Emoji"
                 />
                 <input
+                  type="text"
                   value={newHabit}
                   onChange={(e) => setNewHabit(e.target.value)}
                   placeholder="Add a habit…"
@@ -155,7 +166,13 @@ function HabitTracker() {
             </div>
 
             <div className="flex flex-col items-center gap-3 md:border-l md:border-border md:pl-6">
-              <CircularProgress value={overall} size={140} stroke={10} sublabel="Monthly score" />
+              <MonthlyScore
+                value={overall}
+                daysInMonth={state.daysInMonth}
+                todayDay={state.todayDay}
+                dayScores={dayScores}
+                size={210}
+              />
               <div className="text-center text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                 {overall >= 70 ? "On a roll" : overall >= 50 ? "Holding steady" : overall > 0 ? "Reset & ride" : "Tap to begin"}
               </div>
@@ -201,7 +218,7 @@ function HabitTracker() {
             </div>
             <div className="font-mono text-[11px] text-muted-foreground">avg <span className="text-foreground">{avgSleep ? avgSleep.toFixed(1) : "—"}h</span></div>
           </div>
-          <BarChart
+          <LineChart
             data={state.sleep}
             maxY={10}
             ySteps={5}
@@ -279,18 +296,20 @@ function EditableCard(props: {
         {props.tagLabel}
       </span>
       <input
-        value={props.name}
+        type="text"
+        value={props.name ?? ""}
         onChange={(e) => props.onRename(e.target.value)}
         maxLength={60}
+        placeholder="Name this habit…"
         className="mt-2 mb-4 block w-full bg-transparent font-serif italic text-foreground/80 outline-none border-b border-transparent focus:border-border py-0.5"
       />
-      <div className="text-[10px] text-muted-foreground mb-2">Click a day to score 0 → 4</div>
-      <BarChart
+      <div className="text-[10px] text-muted-foreground mb-2">Click a day-tick to score 0 → 4</div>
+      <LineChart
         data={props.data}
         maxY={4}
         ySteps={4}
         color={props.color}
-        height={100}
+        height={110}
         todayDay={props.todayDay}
         onCycle={props.onCycle}
       />
