@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { CircularProgress } from "@/components/CircularProgress";
+import { MonthlyScore } from "@/components/MonthlyScore";
 import { MomentumConstellation } from "@/components/MomentumConstellation";
-import { BarChart } from "@/components/BarChart";
+import { LineChart } from "@/components/LineChart";
 import { computeStats, useTracker } from "@/lib/use-tracker";
 
 export const Route = createFileRoute("/")({
