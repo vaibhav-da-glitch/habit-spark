@@ -1,0 +1,171 @@
+import { useEffect, useRef, useState } from "react";
+
+interface Props {
+  data: number[];
+  maxY: number;
+  ySteps?: number;
+  color: string;
+  height?: number;
+  unit?: string;
+  todayDay: number;
+  onCycle?: (dayIdx: number) => void;
+  onSet?: (dayIdx: number, value: number) => void;
+}
+
+/**
+ * Line + tick chart. Each day is a dot ("tick"); ticks are connected with
+ * a polyline. Clicking a day on cycle-mode increments its score; on set-mode
+ * the click/drag Y position sets the value.
+ */
+export function LineChart({
+  data, maxY, ySteps = 4, color, height = 130, unit = "", todayDay, onCycle, onSet,
+}: Props) {
+  const ticks = Array.from({ length: ySteps + 1 }, (_, i) => Math.round(((ySteps - i) / ySteps) * maxY));
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
+  const [hover, setHover] = useState<number | null>(null);
+
+  const W = 100; // viewBox width (percent based)
+  const H = 100;
+  const pad = 4;
+  const n = data.length;
+  const xAt = (i: number) => pad + (i * (W - pad * 2)) / Math.max(1, n - 1);
+  const yAt = (v: number) => H - pad - (Math.max(0, Math.min(maxY, v)) / Math.max(1, maxY)) * (H - pad * 2);
+
+  const valueFromY = (clientY: number) => {
+    const el = wrapRef.current;
+    if (!el) return 0;
+    const r = el.getBoundingClientRect();
+    const pct = 1 - Math.max(0, Math.min(1, (clientY - r.top) / r.height));
+    return Math.round(pct * maxY * 10) / 10;
+  };
+  const dayFromX = (clientX: number) => {
+    const el = wrapRef.current;
+    if (!el) return 0;
+    const r = el.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    return Math.round(pct * (n - 1));
+  };
+
+  useEffect(() => {
+    if (dragging === null || !onSet) return;
+    const move = (e: MouseEvent) => onSet(dayFromX(e.clientX), valueFromY(e.clientY));
+    const up = () => setDragging(null);
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+    return () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
+  }, [dragging, onSet]);
+
+  // Build polyline only over filled-in (non-zero) days up to today
+  const filledPoints = data
+    .map((v, i) => ({ v, i }))
+    .filter((p) => p.i + 1 <= todayDay && p.v > 0);
+  const linePath = filledPoints.map((p, k) => `${k === 0 ? "M" : "L"} ${xAt(p.i)} ${yAt(p.v)}`).join(" ");
+  const areaPath = filledPoints.length
+    ? `${linePath} L ${xAt(filledPoints[filledPoints.length - 1].i)} ${H - pad} L ${xAt(filledPoints[0].i)} ${H - pad} Z`
+    : "";
+
+  return (
+    <div className="flex gap-2 select-none">
+      <div className="flex flex-col justify-between text-right pr-1" style={{ height }}>
+        {ticks.map((t, i) => (
+          <span key={i} className="text-[9px] text-muted-foreground leading-none">{t}{unit}</span>
+        ))}
+      </div>
+      <div className="flex-1 flex flex-col">
+        <div
+          ref={wrapRef}
+          className="relative border-l border-b border-border"
+          style={{ height }}
+          onMouseDown={(e) => {
+            if (!onSet) return;
+            e.preventDefault();
+            const i = dayFromX(e.clientX);
+            setDragging(i);
+            onSet(i, valueFromY(e.clientY));
+          }}
+        >
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
+            {/* horizontal grid */}
+            {ticks.map((_, i) => {
+              const y = pad + (i * (H - pad * 2)) / ySteps;
+              return <line key={i} x1={pad} x2={W - pad} y1={y} y2={y} stroke="var(--border)" strokeWidth={0.3} strokeDasharray="0.6 1" />;
+            })}
+            {/* area fill */}
+            {areaPath && <path d={areaPath} fill={color} opacity={0.12} />}
+            {/* line */}
+            {linePath && (
+              <path
+                d={linePath}
+                fill="none"
+                stroke={color}
+                strokeWidth={0.9}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ filter: "drop-shadow(0 0 1px " + color + ")" }}
+              />
+            )}
+          </svg>
+          {/* interactive dots */}
+          {data.map((v, i) => {
+            const isToday = i + 1 === todayDay;
+            const isFuture = i + 1 > todayDay;
+            const filled = v > 0;
+            const left = `${xAt(i)}%`;
+            const top = filled ? `${yAt(v)}%` : "100%";
+            const interactive = !!(onCycle || onSet) && !isFuture;
+            return (
+              <div
+                key={i}
+                className="absolute"
+                style={{ left, top, transform: "translate(-50%, -50%)" }}
+              >
+                <button
+                  type="button"
+                  disabled={!interactive}
+                  onClick={() => onCycle?.(i)}
+                  onMouseEnter={() => setHover(i)}
+                  onMouseLeave={() => setHover((h) => (h === i ? null : h))}
+                  className={`block rounded-full transition-transform ${interactive ? "hover:scale-150 cursor-pointer" : "cursor-default"}`}
+                  style={{
+                    width: filled ? 9 : 5,
+                    height: filled ? 9 : 5,
+                    background: filled ? color : "transparent",
+                    border: `1.5px solid ${filled ? color : "var(--border)"}`,
+                    boxShadow: isToday ? `0 0 0 2px var(--background), 0 0 0 3px ${color}` : "none",
+                  }}
+                  aria-label={`Day ${i + 1}: ${v}${unit}`}
+                />
+                {hover === i && (
+                  <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-7 whitespace-nowrap rounded bg-foreground px-1.5 py-0.5 text-[9px] text-background">
+                    d{i + 1} · {v}{unit}{onCycle && interactive ? " · click +" : ""}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {/* today vertical guide */}
+          <div
+            className="pointer-events-none absolute top-0 bottom-0 border-l border-dashed border-foreground/30"
+            style={{ left: `${xAt(todayDay - 1)}%` }}
+          />
+        </div>
+        <div className="relative mt-1 h-3">
+          {data.map((_, i) => {
+            const show = (i + 1) % 5 === 0 || i === 0 || i + 1 === data.length;
+            if (!show) return null;
+            return (
+              <span
+                key={i}
+                className="absolute -translate-x-1/2 text-[8px] text-muted-foreground"
+                style={{ left: `${xAt(i)}%` }}
+              >
+                {i + 1}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
