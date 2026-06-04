@@ -94,10 +94,11 @@ function HabitTracker() {
                         <td className="whitespace-nowrap pr-3 py-1 text-[12px] font-medium">
                           <span className="mr-2">{h.emoji}</span>
                           <input
-                            value={h.name}
+                            type="text"
+                            value={h.name ?? ""}
                             onChange={(e) => t.renameHabit(h.id, e.target.value)}
                             maxLength={40}
-                            className="bg-transparent outline-none border-b border-transparent focus:border-border w-[110px] py-0.5"
+                            className="bg-transparent outline-none border-b border-transparent focus:border-border w-[140px] py-0.5"
                           />
                         </td>
                         {h.cells.map((c, i) => {
@@ -139,6 +140,7 @@ function HabitTracker() {
                 className="mt-4 flex items-center gap-2"
               >
                 <input
+                  type="text"
                   value={newEmoji}
                   onChange={(e) => setNewEmoji(e.target.value)}
                   maxLength={2}
@@ -146,6 +148,7 @@ function HabitTracker() {
                   aria-label="Emoji"
                 />
                 <input
+                  type="text"
                   value={newHabit}
                   onChange={(e) => setNewHabit(e.target.value)}
                   placeholder="Add a habit…"
