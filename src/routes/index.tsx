@@ -352,7 +352,7 @@ function HabitTracker() {
                 <div className="font-mono text-[11px] text-muted-foreground">avg <span className="text-foreground">{avgSleep ? avgSleep.toFixed(1) : "—"}h</span></div>
               </div>
               <LineChart
-                data={state.sleep} maxY={10} ySteps={5} color="var(--blue)"
+                data={state.sleep} maxY={12} ySteps={6} color="var(--blue)"
                 unit="h" todayDay={state.todayDay} onSet={t.setSleep} disabled={isReadOnly}
               />
             </section>

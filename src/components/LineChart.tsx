@@ -32,14 +32,18 @@ export function LineChart({
     const el = wrapRef.current;
     if (!el) return 0;
     const r = el.getBoundingClientRect();
-    const pct = 1 - Math.max(0, Math.min(1, (clientY - r.top) / r.height));
+    const padFrac = pad / H;
+    const raw = 1 - (clientY - r.top) / r.height;
+    const pct = Math.max(0, Math.min(1, (raw - padFrac) / (1 - 2 * padFrac)));
     return Math.round(pct * maxY * 10) / 10;
   };
   const dayFromX = (clientX: number) => {
     const el = wrapRef.current;
     if (!el) return 0;
     const r = el.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    const padFrac = pad / W;
+    const raw = (clientX - r.left) / r.width;
+    const pct = Math.max(0, Math.min(1, (raw - padFrac) / (1 - 2 * padFrac)));
     return Math.round(pct * (n - 1));
   };
 
@@ -84,7 +88,7 @@ export function LineChart({
 
   return (
     <div className="flex gap-2 select-none">
-      <div className="flex flex-col justify-between text-right pr-1" style={{ height }}>
+      <div className="flex flex-col justify-between text-right pr-1" style={{ height, paddingTop: `${(pad / H) * 100}%`, paddingBottom: `${(pad / H) * 100}%` }}>
         {ticks.map((t, i) => (
           <span key={i} className="text-[9px] text-muted-foreground leading-none">{t}{unit}</span>
         ))}
@@ -124,10 +128,17 @@ export function LineChart({
             const isFuture = i + 1 > todayDay;
             const filled = v > 0;
             const left = `${xAt(i)}%`;
-            const top = filled ? `${yAt(v)}%` : "100%";
+            const top = `${yAt(v)}%`;
             const interactive = !!(onCycle || onSet) && !isFuture && !disabled;
             return (
               <div key={i} className="absolute" style={{ left, top, transform: "translate(-50%, -50%)" }}>
+                {onCycle && !isFuture && !disabled && (
+                  <div
+                    className="absolute inset-y-0 cursor-pointer"
+                    style={{ left: `calc(${xAt(i)}% - 6px)`, width: 12 }}
+                    onClick={() => onCycle(i)}
+                  />
+                )}
                 <button
                   type="button"
                   disabled={!interactive}
