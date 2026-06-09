@@ -128,10 +128,17 @@ export function LineChart({
             const isFuture = i + 1 > todayDay;
             const filled = v > 0;
             const left = `${xAt(i)}%`;
-            const top = filled ? `${yAt(v)}%` : "100%";
+            const top = `${yAt(v)}%`;
             const interactive = !!(onCycle || onSet) && !isFuture && !disabled;
             return (
               <div key={i} className="absolute" style={{ left, top, transform: "translate(-50%, -50%)" }}>
+                {onCycle && !isFuture && !disabled && (
+                  <div
+                    className="absolute inset-y-0 cursor-pointer"
+                    style={{ left: `calc(${xAt(i)}% - 6px)`, width: 12 }}
+                    onClick={() => onCycle(i)}
+                  />
+                )}
                 <button
                   type="button"
                   disabled={!interactive}
