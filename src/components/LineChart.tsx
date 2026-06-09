@@ -29,6 +29,10 @@ export function LineChart({
   const xAt = (i: number) => pad + (i * (W - pad * 2)) / Math.max(1, n - 1);
   const yAt = (v: number) => H - pad - (Math.max(0, Math.min(maxY, v)) / Math.max(1, maxY)) * (H - pad * 2);
 
+  const snap = (v: number) => {
+    if (step && step > 0) return Math.round(v / step) * step;
+    return Math.round(v * 10) / 10;
+  };
   const valueFromY = (clientY: number) => {
     const el = wrapRef.current;
     if (!el) return 0;
@@ -36,7 +40,7 @@ export function LineChart({
     const padFrac = pad / H;
     const raw = 1 - (clientY - r.top) / r.height;
     const pct = Math.max(0, Math.min(1, (raw - padFrac) / (1 - 2 * padFrac)));
-    return Math.round(pct * maxY * 10) / 10;
+    return snap(pct * maxY);
   };
   const dayFromX = (clientX: number) => {
     const el = wrapRef.current;
