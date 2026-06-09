@@ -78,7 +78,7 @@ export function LineChart({
 
   const filledPoints = data
     .map((v, i) => ({ v, i }))
-    .filter((p) => p.i + 1 <= todayDay && p.v > 0);
+    .filter((p) => p.v > 0);
   const linePath = filledPoints.map((p, k) => `${k === 0 ? "M" : "L"} ${xAt(p.i)} ${yAt(p.v)}`).join(" ");
   const areaPath = filledPoints.length
     ? `${linePath} L ${xAt(filledPoints[filledPoints.length - 1].i)} ${H - pad} L ${xAt(filledPoints[0].i)} ${H - pad} Z`
