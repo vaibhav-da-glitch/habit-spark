@@ -76,6 +76,42 @@ function loadMonth(monthKey: string): TrackerState | null {
   }
 }
 
+function normalizeCells(cells: CellState[] | undefined, daysInMonth: number, todayDay: number): CellState[] {
+  return Array.from({ length: daysInMonth }, (_, i) => {
+    const saved = cells?.[i];
+    if (saved) return saved;
+    if (i + 1 < todayDay) return "missed";
+    if (i + 1 === todayDay) return "today";
+    return "future";
+  });
+}
+
+function normalizeNumbers(values: number[] | undefined, daysInMonth: number): number[] {
+  return Array.from({ length: daysInMonth }, (_, i) => values?.[i] ?? 0);
+}
+
+function normalizeState(saved: TrackerState, daysInMonth: number, todayDay: number): TrackerState {
+  return {
+    ...saved,
+    daysInMonth,
+    todayDay,
+    habits: saved.habits.map((h) => ({
+      ...h,
+      notes: h.notes ?? {},
+      goal: h.goal ?? { kind: "daily" },
+      cells: normalizeCells(h.cells, daysInMonth, todayDay).map((c, i) => {
+        if (i + 1 === todayDay && c === "future") return "today";
+        if (i + 1 < todayDay && c === "future") return "missed";
+        if (i + 1 > todayDay && c === "today") return "future";
+        return c;
+      }),
+    })),
+    sleep: normalizeNumbers(saved.sleep, daysInMonth),
+    quit: { ...saved.quit, data: normalizeNumbers(saved.quit?.data, daysInMonth) },
+    build: { ...saved.build, data: normalizeNumbers(saved.build?.data, daysInMonth) },
+  };
+}
+
 function listArchivedMonths(): string[] {
   const out: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
