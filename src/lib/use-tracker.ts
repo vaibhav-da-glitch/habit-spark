@@ -208,7 +208,7 @@ export function useTracker() {
   const setSleep = guard((dayIdx: number, value: number) =>
     setState((s) => {
       const sleep = [...s.sleep];
-      sleep[dayIdx] = Math.max(0, Math.min(12, Math.round(value * 10) / 10));
+      sleep[dayIdx] = Math.max(0, Math.min(12, Math.round(value * 2) / 2));
       return { ...s, sleep };
     }),
   );
