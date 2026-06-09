@@ -8,13 +8,14 @@ interface Props {
   height?: number;
   unit?: string;
   todayDay: number;
+  step?: number;
   onCycle?: (dayIdx: number) => void;
   onSet?: (dayIdx: number, value: number) => void;
   disabled?: boolean;
 }
 
 export function LineChart({
-  data, maxY, ySteps = 4, color, height = 130, unit = "", todayDay, onCycle, onSet, disabled = false,
+  data, maxY, ySteps = 4, color, height = 130, unit = "", todayDay, step, onCycle, onSet, disabled = false,
 }: Props) {
   const ticks = Array.from({ length: ySteps + 1 }, (_, i) => Math.round(((ySteps - i) / ySteps) * maxY));
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -28,6 +29,10 @@ export function LineChart({
   const xAt = (i: number) => pad + (i * (W - pad * 2)) / Math.max(1, n - 1);
   const yAt = (v: number) => H - pad - (Math.max(0, Math.min(maxY, v)) / Math.max(1, maxY)) * (H - pad * 2);
 
+  const snap = (v: number) => {
+    if (step && step > 0) return Math.round(v / step) * step;
+    return Math.round(v * 10) / 10;
+  };
   const valueFromY = (clientY: number) => {
     const el = wrapRef.current;
     if (!el) return 0;
@@ -35,7 +40,7 @@ export function LineChart({
     const padFrac = pad / H;
     const raw = 1 - (clientY - r.top) / r.height;
     const pct = Math.max(0, Math.min(1, (raw - padFrac) / (1 - 2 * padFrac)));
-    return Math.round(pct * maxY * 10) / 10;
+    return snap(pct * maxY);
   };
   const dayFromX = (clientX: number) => {
     const el = wrapRef.current;
@@ -73,7 +78,7 @@ export function LineChart({
 
   const filledPoints = data
     .map((v, i) => ({ v, i }))
-    .filter((p) => p.i + 1 <= todayDay && p.v > 0);
+    .filter((p) => p.v > 0);
   const linePath = filledPoints.map((p, k) => `${k === 0 ? "M" : "L"} ${xAt(p.i)} ${yAt(p.v)}`).join(" ");
   const areaPath = filledPoints.length
     ? `${linePath} L ${xAt(filledPoints[filledPoints.length - 1].i)} ${H - pad} L ${xAt(filledPoints[0].i)} ${H - pad} Z`
@@ -123,29 +128,31 @@ export function LineChart({
               />
             )}
           </svg>
+          {onCycle && !disabled && data.map((_, i) => (
+            <div
+              key={`hit-${i}`}
+              className="absolute inset-y-0 cursor-pointer"
+              style={{ left: `calc(${xAt(i)}% - 6px)`, width: 12 }}
+              onClick={() => onCycle(i)}
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover((h) => (h === i ? null : h))}
+            />
+          ))}
           {data.map((v, i) => {
             const isToday = i + 1 === todayDay;
-            const isFuture = i + 1 > todayDay;
             const filled = v > 0;
             const left = `${xAt(i)}%`;
             const top = `${yAt(v)}%`;
-            const interactive = !!(onCycle || onSet) && !isFuture && !disabled;
+            const interactive = !!(onCycle || onSet) && !disabled;
             return (
-              <div key={i} className="absolute" style={{ left, top, transform: "translate(-50%, -50%)" }}>
-                {onCycle && !isFuture && !disabled && (
-                  <div
-                    className="absolute inset-y-0 cursor-pointer"
-                    style={{ left: `calc(${xAt(i)}% - 6px)`, width: 12 }}
-                    onClick={() => onCycle(i)}
-                  />
-                )}
+              <div key={i} className="absolute pointer-events-none" style={{ left, top, transform: "translate(-50%, -50%)" }}>
                 <button
                   type="button"
                   disabled={!interactive}
                   onClick={() => onCycle?.(i)}
                   onMouseEnter={() => setHover(i)}
                   onMouseLeave={() => setHover((h) => (h === i ? null : h))}
-                  className={`block rounded-full transition-transform ${interactive ? "hover:scale-150 cursor-pointer" : "cursor-default"}`}
+                  className={`pointer-events-auto block rounded-full transition-transform ${interactive ? "hover:scale-150 cursor-pointer" : "cursor-default"}`}
                   style={{
                     width: filled ? 9 : 5,
                     height: filled ? 9 : 5,
