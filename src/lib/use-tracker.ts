@@ -180,8 +180,9 @@ export function useTracker() {
       habits: s.habits.map((h) => {
         if (h.id !== habitId) return h;
         const curC = h.cells[dayIdx];
+        const isPast = dayIdx + 1 < s.todayDay;
         const next: CellState =
-          curC === "done" ? "missed" : curC === "missed" ? "future" : curC === "future" ? "done" : "done";
+          curC === "done" ? "missed" : curC === "missed" ? (isPast ? "done" : "future") : curC === "future" ? "done" : "done";
         const cells = [...h.cells];
         cells[dayIdx] = next === "future" && dayIdx + 1 === s.todayDay ? "today" : next;
         const notes = { ...(h.notes ?? {}) };
