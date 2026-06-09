@@ -128,29 +128,31 @@ export function LineChart({
               />
             )}
           </svg>
+          {onCycle && !disabled && data.map((_, i) => (
+            <div
+              key={`hit-${i}`}
+              className="absolute inset-y-0 cursor-pointer"
+              style={{ left: `calc(${xAt(i)}% - 6px)`, width: 12 }}
+              onClick={() => onCycle(i)}
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover((h) => (h === i ? null : h))}
+            />
+          ))}
           {data.map((v, i) => {
             const isToday = i + 1 === todayDay;
-            const isFuture = i + 1 > todayDay;
             const filled = v > 0;
             const left = `${xAt(i)}%`;
             const top = `${yAt(v)}%`;
-            const interactive = !!(onCycle || onSet) && !isFuture && !disabled;
+            const interactive = !!(onCycle || onSet) && !disabled;
             return (
-              <div key={i} className="absolute" style={{ left, top, transform: "translate(-50%, -50%)" }}>
-                {onCycle && !isFuture && !disabled && (
-                  <div
-                    className="absolute inset-y-0 cursor-pointer"
-                    style={{ left: `calc(${xAt(i)}% - 6px)`, width: 12 }}
-                    onClick={() => onCycle(i)}
-                  />
-                )}
+              <div key={i} className="absolute pointer-events-none" style={{ left, top, transform: "translate(-50%, -50%)" }}>
                 <button
                   type="button"
                   disabled={!interactive}
                   onClick={() => onCycle?.(i)}
                   onMouseEnter={() => setHover(i)}
                   onMouseLeave={() => setHover((h) => (h === i ? null : h))}
-                  className={`block rounded-full transition-transform ${interactive ? "hover:scale-150 cursor-pointer" : "cursor-default"}`}
+                  className={`pointer-events-auto block rounded-full transition-transform ${interactive ? "hover:scale-150 cursor-pointer" : "cursor-default"}`}
                   style={{
                     width: filled ? 9 : 5,
                     height: filled ? 9 : 5,
