@@ -8,13 +8,14 @@ interface Props {
   height?: number;
   unit?: string;
   todayDay: number;
+  step?: number;
   onCycle?: (dayIdx: number) => void;
   onSet?: (dayIdx: number, value: number) => void;
   disabled?: boolean;
 }
 
 export function LineChart({
-  data, maxY, ySteps = 4, color, height = 130, unit = "", todayDay, onCycle, onSet, disabled = false,
+  data, maxY, ySteps = 4, color, height = 130, unit = "", todayDay, step, onCycle, onSet, disabled = false,
 }: Props) {
   const ticks = Array.from({ length: ySteps + 1 }, (_, i) => Math.round(((ySteps - i) / ySteps) * maxY));
   const wrapRef = useRef<HTMLDivElement>(null);
