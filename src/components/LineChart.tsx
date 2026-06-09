@@ -88,7 +88,7 @@ export function LineChart({
 
   return (
     <div className="flex gap-2 select-none">
-      <div className="flex flex-col justify-between text-right pr-1" style={{ height }}>
+      <div className="flex flex-col justify-between text-right pr-1" style={{ height, paddingTop: `${(pad / H) * 100}%`, paddingBottom: `${(pad / H) * 100}%` }}>
         {ticks.map((t, i) => (
           <span key={i} className="text-[9px] text-muted-foreground leading-none">{t}{unit}</span>
         ))}
