@@ -467,7 +467,7 @@ function SortableHabitRow({
                 }
               }}
               onContextMenu={(e) => { e.preventDefault(); onCellContext(habit.id, i, e as any); }}
-              disabled={isReadOnly || i + 1 > todayDay}
+              disabled={isReadOnly}
               title={hasNote ? habit.notes![i] : `Day ${i + 1}: ${c}`}
               className="inline-flex h-5 w-5 items-center justify-center rounded-full transition hover:scale-110 disabled:hover:scale-100 disabled:cursor-not-allowed"
             >

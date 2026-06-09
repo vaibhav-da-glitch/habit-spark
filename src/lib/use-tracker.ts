@@ -76,6 +76,42 @@ function loadMonth(monthKey: string): TrackerState | null {
   }
 }
 
+function normalizeCells(cells: CellState[] | undefined, daysInMonth: number, todayDay: number): CellState[] {
+  return Array.from({ length: daysInMonth }, (_, i) => {
+    const saved = cells?.[i];
+    if (saved) return saved;
+    if (i + 1 < todayDay) return "missed";
+    if (i + 1 === todayDay) return "today";
+    return "future";
+  });
+}
+
+function normalizeNumbers(values: number[] | undefined, daysInMonth: number): number[] {
+  return Array.from({ length: daysInMonth }, (_, i) => values?.[i] ?? 0);
+}
+
+function normalizeState(saved: TrackerState, daysInMonth: number, todayDay: number): TrackerState {
+  return {
+    ...saved,
+    daysInMonth,
+    todayDay,
+    habits: saved.habits.map((h) => ({
+      ...h,
+      notes: h.notes ?? {},
+      goal: h.goal ?? { kind: "daily" },
+      cells: normalizeCells(h.cells, daysInMonth, todayDay).map((c, i) => {
+        if (i + 1 === todayDay && c === "future") return "today";
+        if (i + 1 < todayDay && c === "future") return "missed";
+        if (i + 1 > todayDay && c === "today") return "future";
+        return c;
+      }),
+    })),
+    sleep: normalizeNumbers(saved.sleep, daysInMonth),
+    quit: { ...saved.quit, data: normalizeNumbers(saved.quit?.data, daysInMonth) },
+    build: { ...saved.build, data: normalizeNumbers(saved.build?.data, daysInMonth) },
+  };
+}
+
 function listArchivedMonths(): string[] {
   const out: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
@@ -115,20 +151,8 @@ export function useTracker() {
       }
 
       const raw = loadMonth(cur.monthKey);
-      if (raw && raw.daysInMonth === cur.daysInMonth) {
-        raw.todayDay = cur.day;
-        raw.habits = raw.habits.map((h) => ({
-          ...h,
-          notes: h.notes ?? {},
-          goal: h.goal ?? { kind: "daily" },
-          cells: h.cells.map((c, i) => {
-            if (i + 1 === cur.day && c === "future") return "today";
-            if (i + 1 < cur.day && c === "future") return "missed";
-            if (i + 1 > cur.day && c === "today") return "future";
-            return c;
-          }),
-        }));
-        setState(raw);
+      if (raw) {
+        setState(normalizeState(raw, cur.daysInMonth, cur.day));
       }
       localStorage.setItem(CURRENT_PTR, cur.monthKey);
     } catch {}
@@ -151,13 +175,13 @@ export function useTracker() {
     setViewMonth(monthKey);
     if (monthKey === cur.monthKey) {
       const fromStore = loadMonth(monthKey);
-      setState(fromStore ?? emptyMonth(cur.monthKey, cur.daysInMonth, cur.day));
+      setState(fromStore ? normalizeState(fromStore, cur.daysInMonth, cur.day) : emptyMonth(cur.monthKey, cur.daysInMonth, cur.day));
       return;
     }
     const stored = loadMonth(monthKey);
     if (stored) {
       // archive view — freeze todayDay to end of that month so nothing is "today"
-      setState({ ...stored, todayDay: stored.daysInMonth + 1 });
+      setState(normalizeState(stored, stored.daysInMonth, stored.daysInMonth + 1));
     }
   };
 
