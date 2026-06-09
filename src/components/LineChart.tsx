@@ -32,14 +32,18 @@ export function LineChart({
     const el = wrapRef.current;
     if (!el) return 0;
     const r = el.getBoundingClientRect();
-    const pct = 1 - Math.max(0, Math.min(1, (clientY - r.top) / r.height));
+    const padFrac = pad / H;
+    const raw = 1 - (clientY - r.top) / r.height;
+    const pct = Math.max(0, Math.min(1, (raw - padFrac) / (1 - 2 * padFrac)));
     return Math.round(pct * maxY * 10) / 10;
   };
   const dayFromX = (clientX: number) => {
     const el = wrapRef.current;
     if (!el) return 0;
     const r = el.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    const padFrac = pad / W;
+    const raw = (clientX - r.left) / r.width;
+    const pct = Math.max(0, Math.min(1, (raw - padFrac) / (1 - 2 * padFrac)));
     return Math.round(pct * (n - 1));
   };
 
